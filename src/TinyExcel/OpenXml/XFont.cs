@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace TinyExcel;
 
@@ -34,6 +36,22 @@ public struct XFont : IEquatable<XFont>
     };
 
     public XFont() { }
+
+    public async Task Write(StreamWriter writer)
+    {
+        await writer.WriteAsync("<font>");
+        if (this.Bold) await writer.WriteAsync("<b/>");
+        if (this.Italic) await writer.WriteAsync("<i/>");
+        if (this.Underline != XFontUnderline.None)
+            await writer.WriteAsync($"<u val=\"{Enum.GetName(this.Underline).ToCamelCase()}\"/>");
+        await writer.WriteAsync($"<vertAlign val=\"{Enum.GetName(this.VerticalAlignment).ToCamelCase()}\"/>");
+        await writer.WriteAsync($"<sz val=\"{this.Size}\"/>");
+        await this.Color.Write(writer);
+        await writer.WriteAsync($"<name val=\"{this.Name}\"/>");
+        await writer.WriteAsync($"<family val=\"{(int)this.Family}\"/>");
+        await writer.WriteAsync($"<charset val=\"{(int)this.Charset}\"/>");
+        await writer.WriteAsync("</font>");
+    }
 
     public bool Equals(XFont other)
     {

@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace TinyExcel;
 
@@ -36,6 +37,39 @@ public struct XBorder : IEquatable<XBorder>
 
     public XBorder() { }
 
+    public async Task Write(StreamWriter writer)
+    {
+        //<x:border diagonalUp="0" diagonalDown="0">
+        await writer.WriteAsync($"<border");
+        if (this.DiagonalUp)
+            await writer.WriteAsync($" diagonalUp=\"{this.DiagonalUp.ToValue()}\"");
+        if (this.DiagonalDown)
+            await writer.WriteAsync($" diagonalDown=\"{this.DiagonalDown.ToValue()}\"");
+        await writer.WriteAsync(">");
+
+        //  <x:left style="dashDot">
+        await writer.WriteAsync($"<left style=\"{Enum.GetName(this.LeftStyle).ToCamelCase()}\">");
+        await this.LeftColor.Write(writer);
+        await writer.WriteAsync("</left>");
+
+        ///  <x:top style="dashDot">
+        await writer.WriteAsync($"<top style=\"{Enum.GetName(this.TopStyle).ToCamelCase()}\">");
+        await this.TopColor.Write(writer);
+        await writer.WriteAsync("</top>");
+
+        //  <x:right style="dashDot">
+        await writer.WriteAsync($"<right style=\"{Enum.GetName(this.RightStyle).ToCamelCase()}\">");
+        await this.RightColor.Write(writer);
+        await writer.WriteAsync("</right>");
+
+        //  <x:bottom style="dashDot">
+        await writer.WriteAsync($"<bottom style=\"{Enum.GetName(this.BottomStyle).ToCamelCase()}\">");
+        await this.BottomColor.Write(writer);
+        await writer.WriteAsync("</bottom>");
+
+        await writer.WriteAsync("</border>");
+    }
+
     public bool Equals(XBorder other)
     {
         return Equals(LeftStyle, LeftColor, other.LeftStyle, other.LeftColor)
@@ -46,7 +80,8 @@ public struct XBorder : IEquatable<XBorder>
             && DiagonalUp == other.DiagonalUp
             && DiagonalDown == other.DiagonalDown;
     }
-    public override bool Equals([NotNullWhen(true)] object other) => other is XBorder && Equals((XBorder)other);
+    public override bool Equals(object other)
+        => other is XBorder && Equals((XBorder)other);
     private bool Equals(XBorderStyle style1, XColor color1, XBorderStyle style2, XColor color2)
     {
         return (style1 == XBorderStyle.None && style2 == XBorderStyle.None)

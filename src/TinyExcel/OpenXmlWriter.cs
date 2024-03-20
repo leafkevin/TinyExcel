@@ -1,164 +1,149 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
-using System.Xml;
 
 namespace TinyExcel;
 
 public class OpenXmlWriter
 {
-    public async Task WriteFont(XmlWriter writer, XFont xFont)
+    public async Task WriteFont(StreamWriter writer, XFont xFont)
     {
-        await writer.WriteStartElementAsync("x", "font", null);
-
-        if (xFont.Bold)
-        {
-            await writer.WriteStartElementAsync("x", "b", null);
-            await writer.WriteEndElementAsync();
-        }
-        if (xFont.Italic)
-        {
-            await writer.WriteStartElementAsync("x", "i", null);
-            await writer.WriteEndElementAsync();
-        }
+        await writer.WriteAsync("<font>");
+        if (xFont.Bold) await writer.WriteAsync("<b/>");
+        if (xFont.Italic) await writer.WriteAsync("<i/>");
         if (xFont.Underline != XFontUnderline.None)
-        {
-            await writer.WriteStartElementAsync("x", "u", null);
-            await writer.WriteAttributeStringAsync(null, "val", null, Enum.GetName(xFont.Underline).ToLower());
-            await writer.WriteEndElementAsync();
-        }
-        await writer.WriteStartElementAsync("x", "vertAlign", null);
-        await writer.WriteAttributeStringAsync(null, "val", null, Enum.GetName(xFont.Underline).ToLower());
-        await writer.WriteEndElementAsync();
-
-        await writer.WriteStartElementAsync("x", "sz", null);
-        await writer.WriteAttributeStringAsync(null, "val", null, $"{xFont.Size}");
-        await writer.WriteEndElementAsync();
-
+            await writer.WriteAsync($"<u val=\"{Enum.GetName(xFont.Underline).ToCamelCase()}\"/>");
+        await writer.WriteAsync($"<vertAlign val=\"{Enum.GetName(xFont.VerticalAlignment).ToCamelCase()}\"/>");
+        await writer.WriteAsync($"<sz val=\"{xFont.Size}\"/>");
         await WriteColor(writer, xFont.Color);
-
-        await writer.WriteStartElementAsync("x", "name", null);
-        await writer.WriteAttributeStringAsync(null, "val", null, $"{xFont.Name}");
-        await writer.WriteEndElementAsync();
-
-        await writer.WriteStartElementAsync("x", "family", null);
-        await writer.WriteAttributeStringAsync(null, "val", null, $"{(int)xFont.Family}");
-        await writer.WriteEndElementAsync();
-
-        await writer.WriteStartElementAsync("x", "charset", null);
-        await writer.WriteAttributeStringAsync(null, "val", null, $"{(int)xFont.Charset}");
-        await writer.WriteEndElementAsync();
-
-        await writer.WriteEndElementAsync();
+        await writer.WriteAsync($"<name val=\"{xFont.Name}\"/>");
+        await writer.WriteAsync($"<family val=\"{(int)xFont.Family}\"/>");
+        await writer.WriteAsync($"<charset val=\"{(int)xFont.Charset}\"/>");
+        await writer.WriteAsync("</font>");
     }
-    public async Task WriteColor(XmlWriter writer, XColor xColor)
+    public async Task WriteColor(StreamWriter writer, XColor xColor)
         => await this.WriteColor(writer, xColor, "color");
-    public async Task WriteColor(XmlWriter writer, XColor xColor, string localName)
+    public async Task<bool> WriteColor(StreamWriter writer, XColor xColor, string localName)
     {
-        if (xColor.IsEmpty) return;
+        if (xColor.IsEmpty) return false;
 
-        await writer.WriteStartElementAsync("x", localName, null);
+        await writer.WriteAsync($"<{localName}");
         switch (xColor.ColorType)
         {
             //<x:color indexed="1" />
             case XColorType.Indexed:
-                await writer.WriteAttributeStringAsync(null, "indexed", null, $"{xColor.Value}");
+                await writer.WriteAsync($" indexed={xColor.Value}");
                 break;
             case XColorType.Color:
                 //<x:color rgb="FF000000" />
-                await writer.WriteAttributeStringAsync(null, "rgb", null, $"{xColor.Color.ToArgb().ToString("X")}");
+                await writer.WriteAsync($" rgb={xColor.Color.ToArgbString()}");
                 break;
             //<x:color theme="1" tint="0.3" />
             case XColorType.Theme:
-                await writer.WriteAttributeStringAsync(null, "theme", null, $"{xColor.Value}");
+                await writer.WriteAsync($" theme={xColor.Value}");
                 if (xColor.Tint.HasValue)
-                    await writer.WriteAttributeStringAsync(null, "tint", null, $"{xColor.Tint}");
+                    await writer.WriteAsync($" tint={xColor.Tint}");
                 break;
         };
-        await writer.WriteEndElementAsync();
+        await writer.WriteAsync("/>");
+        return true;
     }
-    public async Task WriteBorder(XmlWriter writer, XBorder xBorder)
+    public async Task WriteBorder(StreamWriter writer, XBorder xBorder)
     {
         //<x:border diagonalUp="0" diagonalDown="0">
-        await writer.WriteStartElementAsync("x", "border", null);
-        await writer.WriteAttributeStringAsync(null, "diagonalUp", null, xBorder.DiagonalUp ? "1" : "0");
-        await writer.WriteAttributeStringAsync(null, "diagonalDown", null, xBorder.DiagonalDown ? "1" : "0");
+        await writer.WriteAsync($"<border");
+        if (xBorder.DiagonalUp)
+            await writer.WriteAsync($" diagonalUp=\"{xBorder.DiagonalUp.ToValue()}\"");
+        if (xBorder.DiagonalDown)
+            await writer.WriteAsync($" diagonalDown=\"{xBorder.DiagonalDown.ToValue()}\"");
+        await writer.WriteAsync(">");
 
         //  <x:left style="dashDot">
-        await writer.WriteStartElementAsync("x", "left", null);
-        await writer.WriteAttributeStringAsync(null, "style", null, Enum.GetName(xBorder.LeftStyle).ToCamelCase());
+        await writer.WriteAsync($"<left style=\"{Enum.GetName(xBorder.LeftStyle).ToCamelCase()}\">");
         await this.WriteColor(writer, xBorder.LeftColor);
-        await writer.WriteEndElementAsync();
+        await writer.WriteAsync("</left>");
 
         ///  <x:top style="dashDot">
-        await writer.WriteStartElementAsync("x", "top", null);
-        await writer.WriteAttributeStringAsync(null, "style", null, Enum.GetName(xBorder.TopStyle).ToCamelCase());
+        await writer.WriteAsync($"<top style=\"{Enum.GetName(xBorder.TopStyle).ToCamelCase()}\">");
         await this.WriteColor(writer, xBorder.TopColor);
-        await writer.WriteEndElementAsync();
+        await writer.WriteAsync("</top>");
 
         //  <x:right style="dashDot">
-        await writer.WriteStartElementAsync("x", "right", null);
-        await writer.WriteAttributeStringAsync(null, "style", null, Enum.GetName(xBorder.RightStyle).ToCamelCase());
+        await writer.WriteAsync($"<right style=\"{Enum.GetName(xBorder.RightStyle).ToCamelCase()}\">");
         await this.WriteColor(writer, xBorder.RightColor);
-        await writer.WriteEndElementAsync();
+        await writer.WriteAsync("</right>");
 
-        //  <x:bottom style="dashDot">        
-        await writer.WriteStartElementAsync("x", "bottom", null);
-        await writer.WriteAttributeStringAsync(null, "style", null, Enum.GetName(xBorder.BottomStyle).ToCamelCase());
+        //  <x:bottom style="dashDot">
+        await writer.WriteAsync($"<bottom style=\"{Enum.GetName(xBorder.BottomStyle).ToCamelCase()}\">");
         await this.WriteColor(writer, xBorder.BottomColor);
-        await writer.WriteEndElementAsync();
+        await writer.WriteAsync("</bottom>");
 
-        await writer.WriteEndElementAsync();
+        await writer.WriteAsync("</border>");
     }
-    public async Task WriteAlignment(XmlWriter writer, XAlignment xAlignment)
+    public async Task WriteAlignment(StreamWriter writer, XAlignment xAlignment)
     {
         //<x:alignment horizontal="general" vertical="bottom" textRotation="150" wrapText="0" indent="0" relativeIndent="0" justifyLastLine="0" shrinkToFit="0" readingOrder="0" />
-        await writer.WriteStartElementAsync("x", "alignment", null);
-        await writer.WriteAttributeStringAsync(null, "horizontal", null, Enum.GetName(xAlignment.Horizontal).ToCamelCase());
-        await writer.WriteAttributeStringAsync(null, "vertical", null, Enum.GetName(xAlignment.Vertical).ToCamelCase());
-        await writer.WriteAttributeStringAsync(null, "textRotation", null, xAlignment.TextRotation.ToString());
-        await writer.WriteAttributeStringAsync(null, "wrapText", null, xAlignment.WrapText ? "1" : "0");
-        await writer.WriteAttributeStringAsync(null, "indent", null, xAlignment.Indent.ToString());
-        await writer.WriteAttributeStringAsync(null, "relativeIndent", null, xAlignment.RelativeIndent.ToString());
-        await writer.WriteAttributeStringAsync(null, "justifyLastLine", null, xAlignment.JustifyLastLine.ToString());
-        await writer.WriteAttributeStringAsync(null, "shrinkToFit", null, xAlignment.ShrinkToFit.ToString());
-        await writer.WriteAttributeStringAsync(null, "readingOrder", null, $"{(int)xAlignment.ReadingOrder}");
-        await writer.WriteEndElementAsync();
+        await writer.WriteAsync("<alignment");
+        await writer.WriteAsync($" horizontal=\"{Enum.GetName(xAlignment.Horizontal).ToCamelCase()}\"");
+        await writer.WriteAsync($" vertical=\"{Enum.GetName(xAlignment.Vertical).ToCamelCase()}\"");
+
+        if (xAlignment.TextRotation > 0)
+            await writer.WriteAsync($" textRotation=\"{xAlignment.TextRotation}\"");
+        if (xAlignment.WrapText)
+            await writer.WriteAsync($" wrapText=\"{xAlignment.WrapText.ToValue()}\"");
+        if (xAlignment.Indent > 0)
+            await writer.WriteAsync($" indent=\"{xAlignment.Indent}\"");
+        if (xAlignment.RelativeIndent > 0)
+            await writer.WriteAsync($" relativeIndent=\"{xAlignment.RelativeIndent}\"");
+        if (xAlignment.JustifyLastLine)
+            await writer.WriteAsync($" justifyLastLine=\"{xAlignment.JustifyLastLine.ToValue()}\"");
+        if (xAlignment.ShrinkToFit)
+            await writer.WriteAsync($" shrinkToFit=\"{xAlignment.ShrinkToFit}\"");
+        if (xAlignment.ReadingOrder > 0)
+            await writer.WriteAsync($" readingOrder=\"{(int)xAlignment.ReadingOrder}");
+        await writer.WriteAsync("/>");
     }
-    public async Task WriteProtection(XmlWriter writer, XProtection xProtection)
+    public async Task WriteProtection(StreamWriter writer, XProtection xProtection)
     {
         //<x:protection locked="1" hidden="0" />
-        await writer.WriteStartElementAsync("x", "protection", null);
-        await writer.WriteAttributeStringAsync(null, "locked", null, xProtection.Locked ? "1" : "0");
-        await writer.WriteAttributeStringAsync(null, "hidden", null, xProtection.Hidden ? "1" : "0");
-        await writer.WriteEndElementAsync();
+        if (!(xProtection.Locked && xProtection.Hidden))
+            return;
+        await writer.WriteAsync("<protection");
+        if (xProtection.Locked)
+            await writer.WriteAsync($" locked=\"{xProtection.Locked.ToValue()}\"");
+        if (xProtection.Locked)
+            await writer.WriteAsync($" hidden=\"{xProtection.Hidden.ToValue()}\"");
+        await writer.WriteAsync("/>");
     }
-    public async Task WriteFill(XmlWriter writer, XFill xFill)
+    public async Task WriteFill(StreamWriter writer, XFill xFill)
     {
-        //<x:fill>
+        //<x:fill count="2">
         //    <x:patternFill patternType = "solid">
         //        <x:fgColor rgb = "284472C4" />
         //    </x:patternFill>
         //</x:fill>
-        await writer.WriteStartElementAsync("x", "fill", null);
-        await writer.WriteStartElementAsync("x", "patternFill", null);
-        await writer.WriteAttributeStringAsync(null, "patternType", null, Enum.GetName(xFill.PatternType).ToCamelCase());
-        await this.WriteColor(writer, xFill.BackgroundColor, "fgColor");
-        await writer.WriteEndElementAsync();
-        await writer.WriteEndElementAsync();
+        await writer.WriteAsync("<fill>");
+        await writer.WriteAsync($"<patternFill patternType=\"{Enum.GetName(xFill.PatternType).ToCamelCase()}\">");
+        if (await this.WriteColor(writer, xFill.BackgroundColor, "fgColor"))
+            await writer.WriteAsync("</patternFill>");
+        else await writer.WriteAsync("/>");
+        await writer.WriteAsync("</fill>");
     }
-    public async Task WriteNumberFormat(XmlWriter writer, XNumberFormat xNumberFormat)
+    public async Task WriteNumberFormat(StreamWriter writer, XNumberFormat xNumberFormat)
     {
         //<x:numFmt numFmtId="0" formatCode="" /> 
-        await writer.WriteStartElementAsync("x", "numFmt", null);
-        await writer.WriteAttributeStringAsync(null, "numFmtId", null, xNumberFormat.NumberFormatId.ToString());
+        await writer.WriteAsync($"<numFmt numFmtId=\"{xNumberFormat.NumberFormatId}\"");
         //Format是否需要考虑转义，比如："¥"#,##0.00;"¥"\-#,##0.00  实际：&quot;¥&quot;#,##0.00;&quot;¥&quot;\-#,##0.00
         //有的$符号会被替换，有的本地化币种中就含有$符号，不应该替换，有[]包装
-  //      <numFmt numFmtId="7" formatCode="&quot;¥&quot;#,##0.00;&quot;¥&quot;\-#,##0.00"/>
-		//<numFmt numFmtId="176" formatCode="yyyy\-mm\-dd\ hh:mm:ss"/>
-		//<numFmt numFmtId="177" formatCode="\$#,##0.00;\-\$#,##0.00"/>
-		//<numFmt numFmtId="179" formatCode="[$€-83C]#,##0.00;[Red]\-[$€-83C]#,##0.00"/>
-        var format = xNumberFormat.Format.Replace("\"", "&quot;").Replace("-", "\\-");
-        await writer.WriteAttributeStringAsync(null, "formatCode", null, format);
-        await writer.WriteEndElementAsync();
+        //      <numFmt numFmtId="7" formatCode="&quot;¥&quot;#,##0.00;&quot;¥&quot;\-#,##0.00"/>
+        //<numFmt numFmtId="176" formatCode="yyyy\-mm\-dd\ hh:mm:ss"/>
+        //<numFmt numFmtId="177" formatCode="\$#,##0.00;\-\$#,##0.00"/>
+        //<numFmt numFmtId="179" formatCode="[$€-83C]#,##0.00;[Red]\-[$€-83C]#,##0.00"/>
+        if (!string.IsNullOrEmpty(xNumberFormat.Format))
+        {
+            var format = xNumberFormat.Format.Replace("\"", "&quot;").Replace("-", "\\-");
+            await writer.WriteAsync($" formatCode=\"{format}\"");
+        }
+        await writer.WriteAsync("/>");
     }
 }

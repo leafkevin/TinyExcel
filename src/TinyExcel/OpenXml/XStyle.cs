@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace TinyExcel;
 
@@ -9,14 +10,26 @@ public struct XStyle : IEquatable<XStyle>
     public XAlignment Alignment { get; set; }
     public XBorder Border { get; set; }
     public XFill Fill { get; set; }
-    /// <summary>
-    /// Should the text values of a cell saved to the file be prefixed by a quote (<c>'</c>) character?
-    /// Has no effect if cell values is not a <see cref="XLDataType.Text"/>. Doesn't affect values during runtime,
-    /// text values are returned without quote.
-    /// </summary>
     public bool IncludeQuotePrefix { get; set; }
     public XNumberFormat NumberFormat { get; set; }
     public XProtection Protection { get; set; }
+
+    public async Task Write(StreamWriter writer)
+    {
+        //<xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyBorder="0"/>
+        await writer.WriteAsync("<xf count=>");
+        if (this.Bold) await writer.WriteAsync("<b/>");
+        if (this.Italic) await writer.WriteAsync("<i/>");
+        if (this.Underline != XFontUnderline.None)
+            await writer.WriteAsync($"<u val=\"{Enum.GetName(this.Underline).ToCamelCase()}\"/>");
+        await writer.WriteAsync($"<vertAlign val=\"{Enum.GetName(this.VerticalAlignment).ToCamelCase()}\"/>");
+        await writer.WriteAsync($"<sz val=\"{this.Size}\"/>");
+        await this.Color.Write(writer);
+        await writer.WriteAsync($"<name val=\"{this.Name}\"/>");
+        await writer.WriteAsync($"<family val=\"{(int)this.Family}\"/>");
+        await writer.WriteAsync($"<charset val=\"{(int)this.Charset}\"/>");
+        await writer.WriteAsync("</font>");
+    }
 
     public bool Equals(XStyle other)
     {
@@ -28,7 +41,7 @@ public struct XStyle : IEquatable<XStyle>
             && this.NumberFormat == other.NumberFormat
             && this.Protection == other.Protection;
     }
-    public override bool Equals([NotNullWhen(true)] object other) => other is XStyle && Equals((XStyle)other);
+    public override bool Equals(object other) => other is XStyle && Equals((XStyle)other);
     public override int GetHashCode()
     {
         var hashCode = new HashCode();

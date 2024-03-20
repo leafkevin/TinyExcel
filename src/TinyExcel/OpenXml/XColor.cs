@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace TinyExcel;
 
@@ -188,6 +189,34 @@ public struct XColor : IEquatable<XColor>
 
     public XColor() { }
 
+    public async Task Write(StreamWriter writer)
+       => await this.Write(writer, "color");
+    public async Task<bool> Write(StreamWriter writer, string localName)
+    {
+        if (this.IsEmpty) return false;
+
+        await writer.WriteAsync($"<{localName}");
+        switch (this.ColorType)
+        {
+            //<x:color indexed="1" />
+            case XColorType.Indexed:
+                await writer.WriteAsync($" indexed={this.Value}");
+                break;
+            case XColorType.Color:
+                //<x:color rgb="FF000000" />
+                await writer.WriteAsync($" rgb={this.Color.ToArgbString()}");
+                break;
+            //<x:color theme="1" tint="0.3" />
+            case XColorType.Theme:
+                await writer.WriteAsync($" theme={this.Value}");
+                if (this.Tint.HasValue)
+                    await writer.WriteAsync($" tint={this.Tint}");
+                break;
+        };
+        await writer.WriteAsync("/>");
+        return true;
+    }
+
     public bool Equals(XColor other)
     {
         if (this.IsEmpty != other.IsEmpty) return false;
@@ -208,7 +237,8 @@ public struct XColor : IEquatable<XColor>
         }
         return false;
     }
-    public override bool Equals([NotNullWhen(true)] object other) => other is XColor && Equals((XColor)other);
+    public override bool Equals(object other)
+        => other is XColor && Equals((XColor)other);
     public override int GetHashCode() => HashCode.Combine(this.IsEmpty, this.ColorType, this.Value, this.Tint);
     public static bool operator ==(XColor left, XColor right) => left.Equals(right);
     public static bool operator !=(XColor left, XColor right) => !(left == right);

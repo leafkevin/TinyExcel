@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace TinyExcel;
 
@@ -32,6 +33,30 @@ public struct XAlignment : IEquatable<XAlignment>
 
     public XAlignment() { }
 
+    public async Task Write(StreamWriter writer)
+    {
+        //<x:alignment horizontal="general" vertical="bottom" textRotation="150" wrapText="0" indent="0" relativeIndent="0" justifyLastLine="0" shrinkToFit="0" readingOrder="0" />
+        await writer.WriteAsync("<alignment");
+        await writer.WriteAsync($" horizontal=\"{Enum.GetName(this.Horizontal).ToCamelCase()}\"");
+        await writer.WriteAsync($" vertical=\"{Enum.GetName(this.Vertical).ToCamelCase()}\"");
+
+        if (this.TextRotation > 0)
+            await writer.WriteAsync($" textRotation=\"{this.TextRotation}\"");
+        if (this.WrapText)
+            await writer.WriteAsync($" wrapText=\"{this.WrapText.ToValue()}\"");
+        if (this.Indent > 0)
+            await writer.WriteAsync($" indent=\"{this.Indent}\"");
+        if (this.RelativeIndent > 0)
+            await writer.WriteAsync($" relativeIndent=\"{this.RelativeIndent}\"");
+        if (this.JustifyLastLine)
+            await writer.WriteAsync($" justifyLastLine=\"{this.JustifyLastLine.ToValue()}\"");
+        if (this.ShrinkToFit)
+            await writer.WriteAsync($" shrinkToFit=\"{this.ShrinkToFit}\"");
+        if (this.ReadingOrder > 0)
+            await writer.WriteAsync($" readingOrder=\"{(int)this.ReadingOrder}");
+        await writer.WriteAsync("/>");
+    }
+
     public bool Equals(XAlignment other)
     {
         return Horizontal == other.Horizontal
@@ -45,7 +70,8 @@ public struct XAlignment : IEquatable<XAlignment>
             && WrapText == other.WrapText
             && TopToBottom == other.TopToBottom;
     }
-    public override bool Equals([NotNullWhen(true)] object other) => other is XAlignment && Equals((XAlignment)other);
+    public override bool Equals(object other)
+        => other is XAlignment && Equals((XAlignment)other);
     public override int GetHashCode()
     {
         var hashCode = new HashCode();

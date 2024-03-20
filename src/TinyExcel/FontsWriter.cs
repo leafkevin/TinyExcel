@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using System.Xml;
 
@@ -6,7 +7,7 @@ namespace TinyExcel;
 
 public class FontsWriter : OpenXmlWriter
 {
-    private bool? KnownFonts { get; set; }
+    private bool knownFonts { get; set; }
     private List<XFont> sharedFonts { get; set; } = new();
     private Dictionary<XFont, int> sharedFontIndices { get; set; } = new();
 
@@ -20,18 +21,30 @@ public class FontsWriter : OpenXmlWriter
         }
         return refIndex;
     }
-
-    public async Task Write(XmlWriter writer)
+    public async Task Parse(XmlNode node)
     {
-        await writer.WriteStartElementAsync("x", "fonts", null);
-        await writer.WriteAttributeStringAsync(null, "count", null, $"{this.sharedFonts.Count}");
-
+        await writer.WriteAsync($"<fonts count=\"{this.sharedFonts.Count}\"");
+        if (this.knownFonts.HasValue)
+            await writer.WriteAsync($"x14ac:knownFonts=\"{this.knownFonts.Value.ToValue()}\"");
+        await writer.WriteAsync(">");
         foreach (var font in this.sharedFonts)
         {
             await this.WriteFont(writer, font);
         }
-
-        await writer.WriteEndElementAsync();
+        await writer.WriteAsync("</fonts>");
+        await writer.FlushAsync();
+    }
+    public async Task Write(StreamWriter writer)
+    {
+        await writer.WriteAsync($"<fonts count=\"{this.sharedFonts.Count}\"");
+        if (this.knownFonts)
+            await writer.WriteAsync($"x14ac:knownFonts=\"{this.knownFonts.ToValue()}\"");
+        await writer.WriteAsync(">");
+        foreach (var font in this.sharedFonts)
+        {
+            await this.WriteFont(writer, font);
+        }
+        await writer.WriteAsync("</fonts>");
         await writer.FlushAsync();
     }
 }
