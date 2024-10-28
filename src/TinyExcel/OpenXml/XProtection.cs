@@ -4,8 +4,9 @@ using System.Threading.Tasks;
 
 namespace TinyExcel;
 
-public struct XProtection : IEquatable<XProtection>
+public struct XProtection : IEquatable<XProtection>, IXRefElement
 {
+    public int RefId { get; set; }
     public bool Locked { get; set; }
     public bool Hidden { get; set; }
 
@@ -15,7 +16,7 @@ public struct XProtection : IEquatable<XProtection>
 
     public async Task Write(StreamWriter writer)
     {
-        //<x:protection locked="1" hidden="0" />
+        //<protection locked="1" hidden="0" />
         if (!(this.Locked && this.Hidden))
             return;
         await writer.WriteAsync("<protection");

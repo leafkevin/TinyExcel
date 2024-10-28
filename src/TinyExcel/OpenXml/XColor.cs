@@ -39,7 +39,7 @@ public struct XColor : IEquatable<XColor>
     //    { "ThreeDShadow", FromRgb(0xA0A0A0) },
     //    { "ThreeDHighlight", FromRgb(0xFFFFFF) }
     //};
-    private static readonly Dictionary<int, XColor> _indexedColors = new Dictionary<int, XColor>
+    private static readonly Dictionary<int, XColor> _indexedColors = new()
     {
         { 0, new XColor{ IsEmpty = false, ColorType = XColorType.Indexed, Color = ParseFromHtml("#FF000000"), Value = 0 }},
         { 1, new XColor{ IsEmpty = false, ColorType = XColorType.Indexed, Color = ParseFromHtml("#FFFFFFFF"), Value = 1 }},
@@ -107,7 +107,7 @@ public struct XColor : IEquatable<XColor>
         { 63, new XColor{ IsEmpty = false, ColorType = XColorType.Indexed, Color = ParseFromHtml("#FF333333"), Value = 63 }},
         { 64, new XColor{ IsEmpty = false, ColorType = XColorType.Indexed, Color = Color.Transparent, Value = 64 }}
     };
-    private static readonly Dictionary<Color, int> _colorIndices = new Dictionary<Color, int>
+    private static readonly Dictionary<Color, int> _colorIndices = new()
     {
         {ParseFromHtml("#FF000000"),0},
         {ParseFromHtml("#FFFFFFFF"),1},

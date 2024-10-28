@@ -4,31 +4,58 @@ using System.Threading.Tasks;
 
 namespace TinyExcel;
 
-public struct XStyle : IEquatable<XStyle>
+public struct XStyle : IEquatable<XStyle>, IXRefElement
 {
-    public XFont Font { get; set; }
-    public XAlignment Alignment { get; set; }
-    public XBorder Border { get; set; }
-    public XFill Fill { get; set; }
+    public int RefId { get; set; }
+    public XFont Font { get; set; } = XFont.Default;
+    public XAlignment? Alignment { get; set; } = XAlignment.Default;
+    public XBorder Border { get; set; } = XBorder.Default;
+    public XFill Fill { get; set; } = XFill.Default;
     public bool IncludeQuotePrefix { get; set; }
-    public XNumberFormat NumberFormat { get; set; }
-    public XProtection Protection { get; set; }
+    public XNumberFormat NumberFormat { get; set; } = XNumberFormat.Default;
+    public XProtection Protection { get; set; } = XProtection.Default;
+
+    public static readonly XStyle Default = new XStyle
+    {
+        Font = XFont.Default,
+        Alignment = XAlignment.Default,
+        Border = XBorder.Default,
+        Fill = XFill.Default,
+        IncludeQuotePrefix = false,
+        NumberFormat = XNumberFormat.Default,
+        Protection = XProtection.Default
+    };
+
+    public XStyle() { }
 
     public async Task Write(StreamWriter writer)
     {
-        //<xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyBorder="0"/>
-        await writer.WriteAsync("<xf count=>");
-        if (this.Bold) await writer.WriteAsync("<b/>");
-        if (this.Italic) await writer.WriteAsync("<i/>");
-        if (this.Underline != XFontUnderline.None)
-            await writer.WriteAsync($"<u val=\"{Enum.GetName(this.Underline).ToCamelCase()}\"/>");
-        await writer.WriteAsync($"<vertAlign val=\"{Enum.GetName(this.VerticalAlignment).ToCamelCase()}\"/>");
-        await writer.WriteAsync($"<sz val=\"{this.Size}\"/>");
-        await this.Color.Write(writer);
-        await writer.WriteAsync($"<name val=\"{this.Name}\"/>");
-        await writer.WriteAsync($"<family val=\"{(int)this.Family}\"/>");
-        await writer.WriteAsync($"<charset val=\"{(int)this.Charset}\"/>");
-        await writer.WriteAsync("</font>");
+        //<xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
+        //<xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0">
+        //	<alignment vertical="top" wrapText="1"/>
+        //</xf>
+        //<xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyNumberFormat="1" applyFill="1" applyBorder="0" applyAlignment="1" applyProtection="1">
+        //	<protection locked="1" hidden="0" />
+        //</xf>
+        //除了第一条记录，其余记录是表示应用的格式记录，所以，默认applyXXX=1，对应元素值也不等于0，如：fontId=1,fillId=2等，第一条以后的记录，applyXXX=1可省略
+        await writer.WriteAsync("<xf");
+        await writer.WriteAsync($" numFmtId=\"{this.NumberFormat.RefId}\"");
+        await writer.WriteAsync($" fillId=\"{this.Fill.RefId}\"");
+        await writer.WriteAsync($" borderId=\"{this.Border.RefId}\"");
+        if (this.Alignment.HasValue)
+            await this.Alignment.Value.Write(writer);
+
+        //第一条记录
+        if (this.RefId == 0)
+        {
+            await writer.WriteAsync("/>");
+            return;
+        }
+        //第一条以后的记录，需要输出applyXXX
+        await writer.WriteAsync($" applyNumberFormat=\"{(this.NumberFormat.RefId != 0).ToValue()}\"");
+        await writer.WriteAsync($" applyFill=\"{(this.Fill.RefId != 0).ToValue()}\"");
+        await writer.WriteAsync($" applyBorder=\"{(this.Border.RefId != 0).ToValue()}\"");
+        await writer.WriteAsync("</xf>");
     }
 
     public bool Equals(XStyle other)

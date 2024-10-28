@@ -1,11 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace TinyExcel;
 
-public struct XFont : IEquatable<XFont>
+public struct XFont : IEquatable<XFont>, IXRefElement
 {
+    public int RefId { get; set; }
     public XFontFamily Family { get; set; } = XFontFamily.Swiss;
     public string Name { get; set; } = "Calibri";
     public double Size { get; set; } = 11;
@@ -37,6 +39,10 @@ public struct XFont : IEquatable<XFont>
 
     public XFont() { }
 
+    public Task Parse(XmlNode node)
+    {
+        return Task.CompletedTask;
+    }
     public async Task Write(StreamWriter writer)
     {
         await writer.WriteAsync("<font>");

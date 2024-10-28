@@ -1,11 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace TinyExcel;
 
-public struct XFill : IEquatable<XFill>
+public struct XFill : IEquatable<XFill>, IXRefElement
 {
+    public int RefId { get; set; }
     public XColor BackgroundColor { get; set; } = XColor.Empty;
     public XColor PatternColor { get; set; } = XColor.Empty;
     public XFillPattern PatternType { get; set; } = XFillPattern.None;
@@ -14,14 +16,17 @@ public struct XFill : IEquatable<XFill>
     public static readonly XFill Default1 = new XFill { PatternType = XFillPattern.Gray125 };
 
     public XFill() { }
-
-    public async Task Write(StreamWriter writer, XFill xFill)
+    public Task Parse(XmlNode node)
     {
-        //<x:fill count="2">
-        //    <x:patternFill patternType = "solid">
-        //        <x:fgColor rgb = "284472C4" />
-        //    </x:patternFill>
-        //</x:fill>
+        return Task.CompletedTask;
+    }
+    public async Task Write(StreamWriter writer)
+    {
+        //<fill>
+        //    <patternFill patternType = "solid">
+        //        <fgColor rgb = "284472C4" />
+        //    </patternFill>
+        //</fill>
         await writer.WriteAsync("<fill>");
         await writer.WriteAsync($"<patternFill patternType=\"{Enum.GetName(this.PatternType).ToCamelCase()}\">");
         if (await this.BackgroundColor.Write(writer, "fgColor"))

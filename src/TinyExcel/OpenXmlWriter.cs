@@ -132,7 +132,7 @@ public class OpenXmlWriter
     public async Task WriteNumberFormat(StreamWriter writer, XNumberFormat xNumberFormat)
     {
         //<x:numFmt numFmtId="0" formatCode="" /> 
-        await writer.WriteAsync($"<numFmt numFmtId=\"{xNumberFormat.NumberFormatId}\"");
+        await writer.WriteAsync($"<numFmt numFmtId=\"{xNumberFormat.RefId}\"");
         //Format是否需要考虑转义，比如："¥"#,##0.00;"¥"\-#,##0.00  实际：&quot;¥&quot;#,##0.00;&quot;¥&quot;\-#,##0.00
         //有的$符号会被替换，有的本地化币种中就含有$符号，不应该替换，有[]包装
         //      <numFmt numFmtId="7" formatCode="&quot;¥&quot;#,##0.00;&quot;¥&quot;\-#,##0.00"/>

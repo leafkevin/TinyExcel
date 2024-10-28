@@ -10,7 +10,7 @@ namespace TinyExcel;
 
 public class ShardingStringPackage
 {
-    private int RefCount { get; set; }
+    private int refCount { get; set; }
     private List<string> sharedStrings { get; set; } = new();
     private Dictionary<string, int> SharedStringIndices { get; set; } = new();
 
@@ -22,7 +22,7 @@ public class ShardingStringPackage
             this.sharedStrings.Add(strValue);
             this.SharedStringIndices.Add(strValue, refIndex);
         }
-        this.RefCount++;
+        this.refCount++;
         return refIndex;
     }
     public async Task Write(XmlWriter writer)
@@ -33,7 +33,7 @@ public class ShardingStringPackage
         // Attributes count and uniqueCount are optional thus are omitted.
         await writer.WriteStartElementAsync("x", "sst", OpenXmlConstants.Main2006SsNs);
         //这两个值count，uniqueCount是可选的，可以不设置
-        await writer.WriteAttributeStringAsync(null, "count", null, $"{this.RefCount}");
+        await writer.WriteAttributeStringAsync(null, "count", null, $"{this.refCount}");
         await writer.WriteAttributeStringAsync(null, "uniqueCount", null, $"{this.sharedStrings.Count}");
 
         foreach (var sharedString in this.sharedStrings)

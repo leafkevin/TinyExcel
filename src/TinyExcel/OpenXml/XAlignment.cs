@@ -1,11 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace TinyExcel;
 
-public struct XAlignment : IEquatable<XAlignment>
+public struct XAlignment : IEquatable<XAlignment>, IXRefElement
 {
+    public int RefId { get; set; }
     public XHorizontalAlignment Horizontal { get; set; } = XHorizontalAlignment.General;
     public XVerticalAlignment Vertical { get; set; } = XVerticalAlignment.Bottom;
     public int Indent { get; set; }
@@ -33,6 +35,10 @@ public struct XAlignment : IEquatable<XAlignment>
 
     public XAlignment() { }
 
+    public Task Parse(XmlNode node)
+    {
+        return Task.CompletedTask;
+    }
     public async Task Write(StreamWriter writer)
     {
         //<x:alignment horizontal="general" vertical="bottom" textRotation="150" wrapText="0" indent="0" relativeIndent="0" justifyLastLine="0" shrinkToFit="0" readingOrder="0" />

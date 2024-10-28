@@ -4,8 +4,9 @@ using System.Threading.Tasks;
 
 namespace TinyExcel;
 
-public struct XBorder : IEquatable<XBorder>
+public struct XBorder : IEquatable<XBorder>, IXRefElement
 {
+    public int RefId { get; set; }
     public XBorderStyle LeftStyle { get; set; } = XBorderStyle.None;
     public XColor LeftColor { get; set; } = XColor.Black;
     public XBorderStyle RightStyle { get; set; } = XBorderStyle.None;
